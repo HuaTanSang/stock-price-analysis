@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Customization 
+airflow/logs/
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+data/raw/
+
+.DS_Store
+.vscode/
+.agent/
