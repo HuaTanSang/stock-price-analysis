@@ -1,0 +1,8 @@
+pandas==2.1.4
+python-dotenv==1.2.2
+asyncio==4.0.0
+minio==7.2.20
+sec_api
+yfinance
+yahoo_fin
+vnstock==4.0.3
