@@ -6,3 +6,5 @@ sec_api
 yfinance
 yahoo_fin
 vnstock==4.0.3
+apache-airflow-providers-amazon==9.29.0
+boto3==1.43.10
