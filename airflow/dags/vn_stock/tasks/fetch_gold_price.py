@@ -30,9 +30,9 @@ def fetch_and_upload_gold_price(bucket_name: str, date: str | None, source: str 
     Raises:
         RuntimeError: If fetching gold price data fails.
     """
+    logger.info("[START] Starting to fetch and upload exchange rate data from vnstock...") 
+    
     try:
-        logger.info("[START] Starting fetching and uploading exchange rate data from vnstock...") 
-        
         retail = Retail()
         gold_price_df = retail.gold(source, date)
         
@@ -42,16 +42,15 @@ def fetch_and_upload_gold_price(bucket_name: str, date: str | None, source: str 
         data_bytes = data.encode('utf-8')
         
         date = date or datetime.now().strftime("%Y-%m-%d")
-        key = construct_minio_key(prefix_type="exchange_rate", date=date, file_format="csv")
+        key = construct_minio_key(prefix_type="gold_price", date=date, file_format="csv")
         
         logger.info(f"Starting to upload data to {bucket_name}")
         save_data_to_minio(data=data_bytes, bucket_name=bucket_name, key=key, file_format="csv")
         
         logger.info(f"Uploaded successfully at {bucket_name}/{key}")
 
-        # 5. Chỉ trả về metadata cho XCom
         return {
-            "bucket": bucket_name,
+            "bucket_name": bucket_name,
             "key": key,
             "status": "success"
         }

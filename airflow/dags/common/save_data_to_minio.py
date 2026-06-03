@@ -1,14 +1,11 @@
 import logging
 from typing import Any
 
-from airflow.decorators import task
-
 from common.utils.minio_helper import get_minio_hook
 
 
 logger = logging.getLogger(__name__)
 
-@task
 def save_data_to_minio(
     data: Any,
     bucket_name: str,

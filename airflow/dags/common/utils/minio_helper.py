@@ -73,8 +73,8 @@ def _serialize_data(data: Any, file_format: str) -> tuple[bytes, str]:
         "Supported formats: json, csv, parquet, txt, bytes."
     )
     
-    
-def construct_minio_key(prefix_type: str, date: str, file_format: str) -> str: 
+
+def construct_minio_key(prefix_type: str, file_format: str, date: str | None = None) -> str: 
     """
     Construct minio key for storage
     Args: 
@@ -84,11 +84,13 @@ def construct_minio_key(prefix_type: str, date: str, file_format: str) -> str:
     Return: 
     - Minio key to object
     """
-    year, month, day = date.split("-")
-    key = f"{prefix_type}/{year}/{month}/{day}/{prefix_type}-{year}-{month}-{day}.{file_format}"
-    
-    return key
-
+    if date: 
+        parts = date.split("-")
+        if len(parts) == 3:
+            year, month, day = parts
+            return f"{prefix_type}/{year}/{month}/{day}/{prefix_type}-{year}-{month}-{day}.{file_format}"
+            
+    return f"{prefix_type}/{prefix_type}.{file_format}"
 
 def get_minio_hook(minio_conn_id: str = "minio_conn") -> S3Hook:
     """
