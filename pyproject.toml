@@ -1,0 +1,15 @@
+[project]
+name = "stock-price-analysis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "apache-airflow-providers-amazon==9.29.0",
+    "asyncio==4.0.0",
+    "boto3==1.43.23",
+    "minio==7.2.20",
+    "pandas==2.1.4",
+    "python-dotenv==1.2.2",
+    "vnstock==4.0.3",
+]
