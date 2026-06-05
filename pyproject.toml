@@ -13,3 +13,8 @@ dependencies = [
     "python-dotenv==1.2.2",
     "vnstock==4.0.3",
 ]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.0",
+]
