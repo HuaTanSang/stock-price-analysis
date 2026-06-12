@@ -9,13 +9,12 @@ from airflow.decorators import dag
     catchup=False,
     tags=["vnstock", "gold_price", "daily"],
 )
-def vnstock_gold_price_dags(): 
+def vnstock_gold_price_dags():
     from vn_stock.tasks.fetch_gold_price import fetch_and_upload_gold_price
-    
+
     run_date_template = "{{ ds }}"
 
-    fetch_exchange_rate_and_save_to_minio = fetch_and_upload_gold_price(bucket_name="vn-stock", date=run_date_template)
+    fetch_and_upload_gold_price(bucket_name="vn-stock", date=run_date_template)
 
-    fetch_exchange_rate_and_save_to_minio
 
 vnstock_gold_price_dags()

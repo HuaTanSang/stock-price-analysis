@@ -1,8 +1,9 @@
-import io 
+import io
 import json
+from datetime import datetime
+from typing import Any
 
 import pandas as pd
-from typing import Any
 
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
@@ -10,10 +11,10 @@ from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 def _serialize_data(data: Any, file_format: str) -> tuple[bytes, str]:
     """
     Convert data to bytes and return content type.
-    Args: 
+    Args:
     - data: (any) data that need to be converted to byte
     - file_format: (str) file format of data
-    Return: 
+    Return:
     - byte of data
     """
 
@@ -35,9 +36,7 @@ def _serialize_data(data: Any, file_format: str) -> tuple[bytes, str]:
         elif isinstance(data, list):
             pd.DataFrame(data).to_csv(buffer, index=False)
         else:
-            raise TypeError(
-                "CSV format requires pandas DataFrame or list[dict]."
-            )
+            raise TypeError("CSV format requires pandas DataFrame or list[dict].")
 
         return buffer.getvalue().encode("utf-8"), "text/csv"
 
@@ -49,9 +48,7 @@ def _serialize_data(data: Any, file_format: str) -> tuple[bytes, str]:
         elif isinstance(data, list):
             df = pd.DataFrame(data)
         else:
-            raise TypeError(
-                "Parquet format requires pandas DataFrame or list[dict]."
-            )
+            raise TypeError("Parquet format requires pandas DataFrame or list[dict].")
 
         df.to_parquet(buffer, index=False)
         return buffer.getvalue(), "application/octet-stream"
@@ -72,32 +69,47 @@ def _serialize_data(data: Any, file_format: str) -> tuple[bytes, str]:
         f"Unsupported file format: {file_format}. "
         "Supported formats: json, csv, parquet, txt, bytes."
     )
-    
 
-def construct_minio_key(prefix_type: str, file_format: str, date: str | None = None) -> str: 
+
+def construct_minio_key(
+    prefix_type: str, file_format: str, date: str | None = None
+) -> str:
     """
     Construct minio key for storage
-    Args: 
+    Args:
     - prefix_type: (str) type of data that prefix store (exchange_rate, gold_price,...)
     - date: (str) date in format YYYY-MM-DD
     - file_format: (str) format of the file
-    Return: 
+    Return:
     - Minio key to object
     """
-    if date: 
+    if date:
         parts = date.split("-")
         if len(parts) == 3:
             year, month, day = parts
             return f"{prefix_type}/{year}/{month}/{day}/{prefix_type}-{year}-{month}-{day}.{file_format}"
-            
+
     return f"{prefix_type}/{prefix_type}.{file_format}"
+
+
+def _validate_date(date_value: str) -> tuple[str, str, str]:
+    try:
+        datetime.strptime(date_value, "%Y-%m-%d")
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid date format: {date_value}. Expected YYYY-MM-DD."
+        ) from e
+
+    year, month, day = date_value.split("-")
+    return year, month, day
+
 
 def get_minio_hook(minio_conn_id: str = "minio_conn") -> S3Hook:
     """
     Getting MinIO connection
-    Args: 
+    Args:
     - minio_conn_id: (str) id of minio connection
-    Returns: 
+    Returns:
     - S3Hook
     """
-    return S3Hook(aws_conn_id=minio_conn_id)    
+    return S3Hook(aws_conn_id=minio_conn_id)

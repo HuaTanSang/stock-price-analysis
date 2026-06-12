@@ -1,6 +1,7 @@
-FROM apache/airflow:2.11.2-python3.12
+FROM apache/airflow:3.2.2-python3.12
 
 USER root
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && apt-get clean \
@@ -9,7 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /opt/airflow
 
 USER airflow
+
 COPY airflow-requirements.txt .
+# TODO: Need to update with uv
 RUN pip install --no-cache-dir \
-    --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.11.2/constraints-3.12.txt" \
     -r airflow-requirements.txt

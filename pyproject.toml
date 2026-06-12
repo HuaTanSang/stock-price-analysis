@@ -12,6 +12,8 @@ dependencies = [
     "pandas==2.1.4",
     "python-dotenv==1.2.2",
     "vnstock==4.0.3",
+    "vnstock-chart>=1.0.1",
+    "vnstock-ezchart>=1.0.2",
 ]
 
 [dependency-groups]

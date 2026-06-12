@@ -1,10 +1,9 @@
-pandas==2.1.4
+pandas==2.3.3
 python-dotenv==1.2.2
-asyncio==4.0.0
 minio==7.2.20
 sec_api
 yfinance
 yahoo_fin
 vnstock==4.0.3
-apache-airflow-providers-amazon==9.29.0
-boto3==1.43.10
+apache-airflow-providers-amazon>=8.19.0
+boto3>=1.34.0

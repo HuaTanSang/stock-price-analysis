@@ -1,6 +1,7 @@
 import pendulum
 from airflow.decorators import dag
 
+
 @dag(
     dag_id="vnstock_fetch_exchange_rate_pipeline",
     schedule="@daily",
@@ -13,8 +14,7 @@ def vnstock_exchange_rate_dag():
 
     run_date_template = "{{ ds }}"
 
-    fetch_exchange_rate_and_save_to_minio = fetch_and_upload_exchange_rate(bucket_name="vn-stock", date=run_date_template)
+    fetch_and_upload_exchange_rate(bucket_name="vn-stock", date=run_date_template)
 
-    fetch_exchange_rate_and_save_to_minio
 
 vnstock_exchange_rate_dag()
