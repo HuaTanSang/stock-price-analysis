@@ -36,7 +36,7 @@ def fetch_and_upload_stock_price(
         run_end_date = end_date or datetime.now().strftime("%Y-%m-%d")
 
         stock_price_data_df = market.equity(ticker_symbol).ohlcv(
-            start_date=run_start_date, end_date=run_end_date, interval=interval
+            start=run_start_date, end=run_end_date, interval=interval
         )
 
         if stock_price_data_df is None or stock_price_data_df.empty:

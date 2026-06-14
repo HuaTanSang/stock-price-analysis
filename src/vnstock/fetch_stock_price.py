@@ -21,8 +21,8 @@ def fetch_stock_price(
     """
     try:
         market = Market()
-        stock_price_data = market.equity(ticker_symbol=ticker_symbol).ohlcv(
-            start_date=start_date, end_date=end_date, interval=interval
+        stock_price_data = market.equity(symbol=ticker_symbol).ohlcv(
+            start=start_date, end=end_date, interval=interval
         )
 
         if stock_price_data is None or stock_price_data.empty:
@@ -57,3 +57,10 @@ def fetch_stock_price(
             f"Failed to fetch stock price from {ticker_symbol}, "
             f"start_date={start_date}, end_date={end_date}"
         ) from e
+
+
+print(
+    fetch_stock_price(
+        ticker_symbol="VCB", start_date="2026-06-14", end_date="2026-06-14"
+    )
+)
