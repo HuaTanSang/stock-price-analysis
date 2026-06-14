@@ -5,14 +5,16 @@ from common.utils.minio_helper import construct_minio_key
 from common.save_data_to_minio import save_data_to_minio
 
 from vnstock import Retail
-from airflow.decorators import task 
-
+from airflow.decorators import task
 
 
 logger = logging.getLogger(__name__)
 
-@task 
-def fetch_and_upload_gold_price(bucket_name: str, date: str | None, source: str = "SJC") -> None:
+
+@task
+def fetch_and_upload_gold_price(
+    bucket_name: str, date: str | None, source: str = "SJC"
+) -> None:
     """
     Fetch gold price data using vnstock API.
 
@@ -30,30 +32,31 @@ def fetch_and_upload_gold_price(bucket_name: str, date: str | None, source: str 
     Raises:
         RuntimeError: If fetching gold price data fails.
     """
-    logger.info("[START] Starting to fetch and upload exchange rate data from vnstock...") 
-    
+    logger.info(
+        "[START] Starting to fetch and upload exchange rate data from vnstock..."
+    )
+
     try:
         retail = Retail()
         gold_price_df = retail.gold(source, date)
-        
+
         logger.info(f"Fetching data from {source} successfully!")
-        
-        data = gold_price_df.to_csv(index=False)
-        data_bytes = data.encode('utf-8')
-        
+
+        data = gold_price_df.to_parquet()
+
         date = date or datetime.now().strftime("%Y-%m-%d")
-        key = construct_minio_key(prefix_type="gold_price", date=date, file_format="csv")
-        
+        key = construct_minio_key(
+            prefix_type="gold_price", date=date, file_format="parquet"
+        )
+
         logger.info(f"Starting to upload data to {bucket_name}")
-        save_data_to_minio(data=data_bytes, bucket_name=bucket_name, key=key, file_format="csv")
-        
+        save_data_to_minio(
+            data=data, bucket_name=bucket_name, key=key, file_format="parquet"
+        )
+
         logger.info(f"Uploaded successfully at {bucket_name}/{key}")
 
-        return {
-            "bucket_name": bucket_name,
-            "key": key,
-            "status": "success"
-        }
+        return {"bucket_name": bucket_name, "key": key, "status": "success"}
 
     except Exception as e:
         logger.exception(
