@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: raw_vnstock_stock_price
+    description: "Stock price loaded from MinIO"
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - ticker
+            - time
+            - interval
+    columns:
+      - name: ticker
+        description: "id of company"
+        data_tests:
+          - not_null
+      - name: time
+        data_tests:
+          - not_null
+
+  - name: raw_vnstock_gold_price
+    description: "Gold price loaded MinIO"
+    columns:
+      - name: time
+        data_tests:
+          - not_null
+
+  - name: raw_vnstock_exchange_rate
+    description: "Exchange rate loaded MinIO"
+    columns:
+      - name: currency
+        data_tests:
+          - not_null

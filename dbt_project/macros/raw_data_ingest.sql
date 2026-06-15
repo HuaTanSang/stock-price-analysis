@@ -5,7 +5,7 @@
     {% set minio_secret_key = env_var('MINIO_SECRET_KEY', 'minioadmin') %} 
     {% set object_path = minio_endpoint ~ "/" ~ object_key %}
 
-    SELECT * 
+    SELECT 
     FROM s3 
     (
         '{{ object_path }}', 

@@ -31,10 +31,11 @@ clean-targets:         # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   dbt_project:
-    raw: 
-      +materialized: view
-    stagging:
-      +materialized: view
-    marts: 
-      +materialized: view
+    vnstock:
+      raw: 
+        +materialized: view
+      staging:
+        +materialized: view
+      marts: 
+        +materialized: view
   
