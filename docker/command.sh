@@ -11,5 +11,5 @@ docker compose --env-file ../.env -f docker-compose.clickhouse.yaml up -d
 docker compose --env-file ../.env -f docker-compose.clickhouse.yaml down
 
 # For dbt
-docker compose --env-file ../.env -f docker-compose.dbt.yaml up -d
-docker compose --env-file ../.env -f docker-compose.dbt.yaml down
+docker compose -f docker-compose.dbt.yaml up -d
+docker compose -f docker-compose.dbt.yaml down
