@@ -49,7 +49,7 @@ def fetch_and_upload_stock_price(
             return
 
         key = construct_minio_key(
-            prefix_type=f"stock_price/interval={interval}",
+            prefix_type=f"stock_price_interval={interval}",
             file_format="parquet",
             date=run_start_date,
         )
