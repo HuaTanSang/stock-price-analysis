@@ -36,3 +36,6 @@ def fetch_gold_price(source: str | None = None, date: str | None = None):
         raise RuntimeError(
             f"Error while fetching gold price from vnstock. source={source}, date={date}"
         ) from e
+
+
+print(fetch_gold_price("SJC", "2026-06-15"))
