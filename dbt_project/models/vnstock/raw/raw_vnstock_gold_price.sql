@@ -5,14 +5,10 @@
 }}
 
 with source_data as (
-    select  
-        time,
-        buy,
-        sell,
-        type
+    select *
     from {{ s3_source(
         s3_path='vn-stock/gold_price/*/*/*/*.parquet',
-        table_structure='time String, buy String, sell String, type String'
+        table_structure='name String, branch String, buy_price String, sell_price String, date String'
     ) }}
 )
 
