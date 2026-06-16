@@ -38,6 +38,9 @@ def fetch_and_upload_stock_price(
         stock_price_data_df = market.equity(ticker_symbol).ohlcv(
             start=run_start_date, end=run_end_date, interval=interval
         )
+        # TODO: Need to change construct_minio_key function to make query more efficient
+        stock_price_data_df["ticker"] = ticker_symbol
+        stock_price_data_df["interval"] = interval
 
         if stock_price_data_df is None or stock_price_data_df.empty:
             logger.warning(
