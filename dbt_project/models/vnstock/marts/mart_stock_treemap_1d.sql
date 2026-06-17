@@ -2,7 +2,8 @@
     config(
         materialized='table',
         engine='MergeTree()',
-        order_by=['_date', '_ticker']
+        order_by=['_date'],
+        schema='marts'
     ) 
 }}
 
@@ -12,7 +13,7 @@ with calc_performance as (
         _date,
         _close,
         (_close - lag(_close, 1) over w_all) / lag(_close, 1) over w_all * 100 as daily_return_pct
-    from {{ ref('stg_vn_stock_stock_price') }}
+    from {{ ref('stg_vnstock_stock_price') }}
     where _interval = '1D'
     window 
         w_all as (partition by _ticker order by _date)

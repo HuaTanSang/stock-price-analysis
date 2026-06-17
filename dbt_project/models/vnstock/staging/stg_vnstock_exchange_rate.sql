@@ -1,12 +1,14 @@
 {{ 
     config(
-        materialized='view'
+        materialized='view',
+        schema='staging'
     ) 
 }}
 
+
 with source_data as (
     select *
-    from {{ source('raw', 'raw_vnstock_exchange_rate') }} 
+    from {{ ref('raw_vnstock_exchange_rate') }}
 ), 
 
 casting_type as (

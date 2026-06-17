@@ -1,12 +1,14 @@
 {{ 
     config(
-        materialized='view'
+        materialized='view',
+        schema='staging'
     ) 
 }}
 
+
 with source_data as (
     select *
-    from {{ source('raw', 'raw_vnstock_stock_price') }} 
+    from {{ ref('raw_vnstock_stock_price') }} 
 ), 
 
 casting_type as (
@@ -42,8 +44,8 @@ cleaned_data as (
         _low,
         _close,
         _volume,
-        _interval
-
+        _interval,
+        _date 
     from deduped
     where rn = 1
 )

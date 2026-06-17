@@ -2,7 +2,8 @@
     config(
         materialized='table',
         engine='MergeTree()',
-        order_by=['_ticker', '_date']
+        order_by=['_date'],
+        schema='marts'
     ) 
 }}
 
@@ -15,7 +16,7 @@ with base as (
         _low,
         _close,
         _volume
-    from {{ ref('stg_vn_stock_stock_price') }}
+    from {{ ref('stg_vnstock_stock_price') }}
 ),
 
 calc_indicators as (

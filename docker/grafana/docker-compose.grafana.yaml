@@ -1,0 +1,15 @@
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource,marcusolsson-treemap-panel
+    networks:
+      - platform_net
+
+networks:
+  platform_net:
+    external: true
+    name: platform_net

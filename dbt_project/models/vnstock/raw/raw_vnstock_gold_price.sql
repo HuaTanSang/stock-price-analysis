@@ -1,8 +1,10 @@
 {{ 
     config(
         materialized='view',
+        schema='raw'
     ) 
 }}
+
 
 with source_data as (
     select *

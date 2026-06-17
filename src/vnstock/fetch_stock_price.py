@@ -61,6 +61,6 @@ def fetch_stock_price(
 
 print(
     fetch_stock_price(
-        ticker_symbol="VCB", start_date="2026-06-14", end_date="2026-06-14"
+        ticker_symbol="VCB", start_date="2026-06-17", end_date="2026-06-17"
     )
 )

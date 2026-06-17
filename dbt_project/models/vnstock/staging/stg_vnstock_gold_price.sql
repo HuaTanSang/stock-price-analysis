@@ -1,12 +1,15 @@
 {{ 
     config(
-        materialized='view'
+        materialized='view',
+        schema='staging'
     ) 
 }}
 
+
+
 with source_data as (
     select *
-    from {{ source('raw', 'raw_vnstock_gold_price') }} 
+    from {{ ref('raw_vnstock_gold_price') }} 
 ), 
 
 casting_type as (
