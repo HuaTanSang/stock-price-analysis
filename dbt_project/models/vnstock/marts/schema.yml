@@ -1,0 +1,111 @@
+version: 2
+
+models:
+  - name: mart_equity_daily_indicators
+    description: >
+      Daily equity analytics with comprehensive technical indicators: 
+      SMA-5/20/50, Bollinger Bands, RSI-14, ATR-14, MACD approximation, 
+      VWAP, 52-week high/low, cumulative returns, and volume ratio.
+      Enriched with industry/sector from ticker symbol reference data.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - _ticker
+            - _date
+            - _interval
+    columns:
+      - name: _ticker
+        data_tests:
+          - not_null
+      - name: _date
+        data_tests:
+          - not_null
+
+  - name: mart_equity_treemap
+    description: >
+      Daily equity performance data designed for sector-grouped treemap 
+      visualizations. Includes industry classification, daily return %, 
+      and turnover proxy for sizing.
+    columns:
+      - name: _ticker
+        data_tests:
+          - not_null
+      - name: _date
+        data_tests:
+          - not_null
+
+  - name: mart_market_index_daily
+    description: >
+      Daily market index analytics for VNINDEX, VN30, HNXINDEX. 
+      Includes point changes, returns, SMA, 52-week range, and volume analysis.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - _index_symbol
+            - _date
+    columns:
+      - name: _index_symbol
+        data_tests:
+          - not_null
+      - name: _date
+        data_tests:
+          - not_null
+
+  - name: mart_gold_analytics
+    description: >
+      Gold price analytics with buy-sell spread, daily changes,
+      and 7/30-day rolling averages per branch and gold type.
+    columns:
+      - name: _date
+        data_tests:
+          - not_null
+      - name: _branch
+        data_tests:
+          - not_null
+      - name: _name
+        data_tests:
+          - not_null
+
+  - name: mart_fx_analytics
+    description: >
+      Foreign exchange analytics with buy-sell spread, daily changes,
+      and 7/30-day rolling sell rate averages per currency.
+    columns:
+      - name: _date
+        data_tests:
+          - not_null
+      - name: _currency_code
+        data_tests:
+          - not_null
+
+  - name: mart_macro_overview
+    description: >
+      Cross-domain macro dashboard combining VNINDEX, VN30, USD/VND rate,
+      and gold SJC price on the same time axis with daily % changes
+      and gold-to-USD ratio.
+    columns:
+      - name: _date
+        data_tests:
+          - not_null
+
+  - name: mart_fundamental_ratios
+    description: >
+      Company fundamental analysis combining income statement, balance sheet,
+      and cash flow data. Computes ROE, ROA, margins, debt-to-equity, 
+      approximate EPS and P/E ratio, and revenue growth rates.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - _ticker
+            - _year
+            - _quarter
+    columns:
+      - name: _ticker
+        data_tests:
+          - not_null
+      - name: _year
+        data_tests:
+          - not_null
+      - name: _quarter
+        data_tests:
+          - not_null

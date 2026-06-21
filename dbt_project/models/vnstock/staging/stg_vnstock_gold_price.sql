@@ -29,7 +29,7 @@ deduped as (
     select 
         *,
         row_number() over (
-            partition by _date, _branch 
+            partition by _date, _branch, _name
             order by _date desc 
         ) as rn
     from casting_type

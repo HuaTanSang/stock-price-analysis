@@ -1,0 +1,116 @@
+version: 2
+
+models:
+  - name: stg_vnstock_stock_price
+    description: "Cleaned and typed stock OHLCV price data. Deduped by (date, ticker, interval)."
+    columns:
+      - name: _ticker
+        description: "Ticker symbol"
+        data_tests:
+          - not_null
+      - name: _date
+        description: "Trading date"
+        data_tests:
+          - not_null
+      - name: _close
+        description: "Closing price (VND)"
+      - name: _volume
+        description: "Trading volume (number of shares)"
+
+  - name: stg_vnstock_gold_price
+    description: "Cleaned gold price data. Deduped by (date, branch, name)."
+    columns:
+      - name: _name
+        description: "Gold product type"
+        data_tests:
+          - not_null
+      - name: _branch
+        description: "Regional branch"
+        data_tests:
+          - not_null
+      - name: _date
+        description: "Price date"
+        data_tests:
+          - not_null
+
+  - name: stg_vnstock_exchange_rate
+    description: "Cleaned Vietcombank exchange rate data. Deduped by (date, currency_code)."
+    columns:
+      - name: _currency_code
+        description: "ISO currency code"
+        data_tests:
+          - not_null
+      - name: _date
+        description: "Rate date"
+        data_tests:
+          - not_null
+
+  - name: stg_vnstock_ticker_symbols
+    description: "Reference data for Vietnamese listed companies with ICB industry classification."
+    columns:
+      - name: _ticker
+        description: "Ticker symbol"
+        data_tests:
+          - not_null
+          - unique
+      - name: _exchange
+        description: "Stock exchange (HOSE, HNX, UPCOM)"
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['HOSE', 'HNX', 'UPCOM']
+      - name: _industry_name
+        description: "ICB industry name (Vietnamese)"
+      - name: _en_industry_name
+        description: "ICB industry name (English)"
+
+  - name: stg_vnstock_market_index
+    description: "Cleaned market index OHLCV data (VNINDEX, VN30, etc.)."
+    columns:
+      - name: _index_symbol
+        description: "Market index symbol"
+        data_tests:
+          - not_null
+      - name: _date
+        description: "Trading date"
+        data_tests:
+          - not_null
+
+  - name: stg_vnstock_income_statement
+    description: "Cleaned quarterly/yearly income statement data."
+    columns:
+      - name: _ticker
+        data_tests:
+          - not_null
+      - name: _year
+        data_tests:
+          - not_null
+      - name: _quarter
+        data_tests:
+          - not_null
+
+  - name: stg_vnstock_balance_sheet
+    description: "Cleaned quarterly/yearly balance sheet data."
+    columns:
+      - name: _ticker
+        data_tests:
+          - not_null
+      - name: _year
+        data_tests:
+          - not_null
+      - name: _quarter
+        data_tests:
+          - not_null
+
+  - name: stg_vnstock_cash_flow
+    description: "Cleaned quarterly/yearly cash flow statement data."
+    columns:
+      - name: _ticker
+        data_tests:
+          - not_null
+      - name: _year
+        data_tests:
+          - not_null
+      - name: _quarter
+        data_tests:
+          - not_null
