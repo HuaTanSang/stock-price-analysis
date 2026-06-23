@@ -3,8 +3,7 @@ import logging
 from common.utils.minio_helper import construct_minio_key
 from common.save_data_to_minio import save_data_to_minio
 
-from vnstock import Listing
-import pandas as pd
+from vnstock import Reference
 from airflow.decorators import task
 
 logger = logging.getLogger(__name__)
@@ -22,25 +21,8 @@ def get_vn_ticker_symbol_and_save_to_minio(bucket_name: str) -> None:
     )
 
     try:
-        # Use KBS listing to fetch enriched metadata (exchange, industry, sector)
-        listing = Listing(source="kbs")
-
-        # 1. Fetch by exchange to get 'exchange' and 'type' (sector)
-        hose_df = listing.symbols_by_exchange("HOSE")
-        hnx_df = listing.symbols_by_exchange("HNX")
-        upcom_df = listing.symbols_by_exchange("UPCOM")
-        exchanges_df = pd.concat([hose_df, hnx_df, upcom_df])
-
-        # 2. Fetch industries
-        industries_df = listing.symbols_by_industries()
-
-        # 3. Merge them
-        ticker_symbols_df = exchanges_df.merge(industries_df, on="symbol", how="left")
-
-        # 4. Rename columns to match raw_vnstock_ticker_symbols schema expectation
-        ticker_symbols_df = ticker_symbols_df.rename(
-            columns={"symbol": "ticker", "type": "sector"}
-        )
+        ref = Reference()
+        ticker_symbols_df = ref.equity().list()
 
         data = ticker_symbols_df.to_parquet()
 
