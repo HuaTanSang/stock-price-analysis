@@ -4,7 +4,7 @@ from airflow.decorators import dag
 
 @dag(
     dag_id="vnstock_fetch_market_index_pipeline_daily",
-    schedule="@daily",
+    schedule="0 15 * * 1-5",
     start_date=pendulum.datetime(2025, 1, 6, tz="Asia/Ho_Chi_Minh"),
     catchup=False,
     tags=["vnstock", "market_index", "daily"],
