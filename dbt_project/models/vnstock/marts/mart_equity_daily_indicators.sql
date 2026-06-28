@@ -28,90 +28,90 @@ with base as (
         on sp._ticker = ts._ticker
 ),
 
--- Technical indicators using window functions
-calc_indicators as (
+-- Phase 1: Tính toán các chỉ báo cơ sở, True Range và gắn số dòng để xử lý warm-up
+calc_base_metrics as (
     select 
         *,
+        -- Số thứ tự dòng theo từng mã để kiểm soát thời gian khởi tạo (warm-up)
+        row_number() over (partition by _ticker order by _date) as row_num,  
 
-        -- ── Daily Returns ──
-        (_close - lag(_close, 1) over w_ticker) 
-            / nullIf(lag(_close, 1) over w_ticker, 0) * 100 
-            as daily_return_pct,
+        -- Daily Returns
+       ((_close * 1.0 - lagInFrame(_close, 1, _close) over w_ticker) 
+            / nullIf(lagInFrame(_close, 1, _close) over w_ticker, 0)) * 100.0 
+            as daily_return_pct, 
 
-        -- ── Simple Moving Averages ──
-        avg(_close) over w_5 as sma_5,
-        avg(_close) over w_20 as sma_20,
-        avg(_close) over w_50 as sma_50,
+        -- Typical Price (Nền tảng cho VWAP)
+        (_high + _low + _close) / 3 as typical_price,
 
-        -- ── Exponential Moving Average approximations ──
-        -- EMA cannot be computed exactly in SQL, but SMA over these windows
-        -- provides a close enough approximation for dashboard use
-        avg(_close) over w_12 as ema_12_approx,
-        avg(_close) over w_26 as ema_26_approx,
-
-        -- ── Bollinger Bands (20-day) ──
-        stddevPop(_close) over w_20 as stddev_20,
-
-        -- ── Volume analysis ──
-        avg(_volume) over w_20 as volume_ma_20,
-
-        -- ── Volatility: True Range & ATR-14 ──
+        -- True Range chuẩn hóa với lagInFrame tránh lỗi biên dữ liệu
         greatest(
             _high - _low,
-            abs(_high - coalesce(lag(_close, 1) over w_ticker, _high)),
-            abs(_low  - coalesce(lag(_close, 1) over w_ticker, _low))
-        ) as true_range,
+            abs(_high - lagInFrame(_close, 1, _high) over w_ticker),
+            abs(_low  - lagInFrame(_close, 1, _low) over w_ticker)
+        ) as true_range,  
 
-        -- ── 52-week (252 trading day) high/low ──
-        max(_high) over w_252 as high_52w,
-        min(_low)  over w_252 as low_52w,
+        -- RSI building blocks
+        if(_close > lagInFrame(_close, 1, _close) over w_ticker, _close - lagInFrame(_close, 1, _close) over w_ticker, 0) as _gain, -- checked 
+        if(_close < lagInFrame(_close, 1, _close) over w_ticker, lagInFrame(_close, 1, _close) over w_ticker - _close, 0) as _loss -- checked 
+    from base
+    window 
+        w_ticker as (partition by _ticker order by _date)
+),
 
-        -- ── Cumulative return from first known date ──
+-- Phase 2: Áp dụng Window Functions kèm điều kiện loại bỏ nhiễu giai đoạn đầu (Warm-up Filter)
+calc_windows as (
+    select
+        *,
+        -- Simple Moving Averages (SMA) - Chỉ trả về giá trị khi đủ số phiên dữ liệu
+        if(row_num >= 5, avg(_close) over w_5, null) as sma_5,
+        if(row_num >= 20, avg(_close) over w_20, null) as sma_20,
+        if(row_num >= 50, avg(_close) over w_50, null) as sma_50,
+
+        -- Đường trung bình phục vụ tính MACD xấp xỉ
+        if(row_num >= 12, avg(_close) over w_12, null) as sma_12,
+        if(row_num >= 26, avg(_close) over w_26, null) as sma_26,
+
+        -- Bollinger Bands Standard Deviation
+        if(row_num >= 20, stddevPop(_close) over w_20, null) as stddev_20,
+
+        -- Volume Moving Average
+        if(row_num >= 20, avg(_volume) over w_20, null) as volume_ma_20,
+
+        -- 52-week High/Low (252 ngày giao dịch)
+        if(row_num >= 252, max(_high) over w_252, null) as high_52w,
+        if(row_num >= 252, min(_low) over w_252, null) as low_52w,
+
+        -- Cumulative return tính từ ngày đầu tiên lên sàn có trong hệ thống
         (_close - first_value(_close) over w_ticker) 
             / nullIf(first_value(_close) over w_ticker, 0) * 100 
             as cumulative_return_pct,
 
-        -- ── VWAP approximation (typical price) ──
-        (_high + _low + _close) / 3 as vwap_approx,
+        -- SỬA LỖI: Rolling VWAP 20 ngày chuẩn có trọng số khối lượng
+        if(row_num >= 20, 
+            sum(typical_price * _volume) over w_20 / nullIf(sum(_volume) over w_20, 0), 
+            null
+        ) as vwap_20_rolling,
 
-        -- ── RSI-14 building blocks ──
-        -- Gain/Loss vs previous close
-        if(
-            _close > lag(_close, 1) over w_ticker,
-            _close - lag(_close, 1) over w_ticker,
-            0
-        ) as _gain,
-        if(
-            _close < lag(_close, 1) over w_ticker,
-            lag(_close, 1) over w_ticker - _close,
-            0
-        ) as _loss
+        -- RSI-14 averages (Phương pháp Cutler RSI)
+        if(row_num >= 14, avg(_gain) over w_14, null) as avg_gain_14,
+        if(row_num >= 14, avg(_loss) over w_14, null) as avg_loss_14,
 
-    from base
+        -- Average True Range (ATR-14)
+        if(row_num >= 14, avg(true_range) over w_14, null) as atr_14
+
+    from calc_base_metrics
     window 
         w_ticker as (partition by _ticker order by _date),
         w_5      as (partition by _ticker order by _date rows between  4 preceding and current row),
         w_12     as (partition by _ticker order by _date rows between 11 preceding and current row),
+        w_14     as (partition by _ticker order by _date rows between 13 preceding and current row),
         w_20     as (partition by _ticker order by _date rows between 19 preceding and current row),
         w_26     as (partition by _ticker order by _date rows between 25 preceding and current row),
         w_50     as (partition by _ticker order by _date rows between 49 preceding and current row),
         w_252    as (partition by _ticker order by _date rows between 251 preceding and current row)
-),
-
--- Second pass to compute RSI and ATR which need the values from the first pass
-with_rsi as (
-    select
-        *,
-        -- Average gain/loss over 14 periods for RSI
-        avg(_gain) over w_14 as avg_gain_14,
-        avg(_loss) over w_14 as avg_loss_14,
-        -- ATR-14
-        avg(true_range) over w_14 as atr_14
-    from calc_indicators
-    window 
-        w_14 as (partition by _ticker order by _date rows between 13 preceding and current row)
 )
 
+-- Phase 3: Bo tròn kết quả và xử lý logic tầng cuối
 select
     _ticker,
     _date,
@@ -122,7 +122,7 @@ select
     _close, 
     _volume,
 
-    -- Reference data
+    -- Thông tin tham chiếu
     _organ_name,
     _industry_name,
     _en_industry_name,
@@ -130,41 +130,39 @@ select
     _en_sector,
     _exchange,
 
-    -- Returns
+    -- Hiệu suất tỷ suất sinh lời
     round(daily_return_pct, 2) as daily_return_pct,
     round(cumulative_return_pct, 2) as cumulative_return_pct,
 
-    -- Moving averages
+    -- Xu hướng (Moving Averages)
     round(sma_5, 2) as sma_5,
     round(sma_20, 2) as sma_20,
     round(sma_50, 2) as sma_50,
+    round(sma_12 - sma_26, 2) as macd_sma_diff, -- Đổi tên rõ nghĩa vì dùng SMA thay vì EMA
 
-    -- MACD approximation (EMA12 - EMA26)
-    round(ema_12_approx - ema_26_approx, 2) as macd_approx,
-
-    -- Bollinger Bands
+    -- Dải Bollinger Bands
     round(sma_20 + (stddev_20 * 2), 2) as bb_upper,
     round(sma_20 - (stddev_20 * 2), 2) as bb_lower,
 
-    -- RSI-14 (0–100 scale)
+    -- Động lượng (RSI-14)
     round(
         if(avg_loss_14 = 0, 100,
            100 - (100 / (1 + avg_gain_14 / nullIf(avg_loss_14, 0)))
         ), 2
     ) as rsi_14,
 
-    -- Volatility
+    -- Biến động và Giá trọng số
     round(atr_14, 2) as atr_14,
-    round(vwap_approx, 2) as vwap_approx,
+    round(vwap_20_rolling, 2) as vwap_20_rolling,
 
-    -- 52-week range
+    -- Khung giá 52 tuần
     round(high_52w, 2) as high_52w,
     round(low_52w, 2) as low_52w,
 
-    -- Volume analysis
+    -- Khối lượng giao dịch
     round(volume_ma_20, 0) as volume_ma_20,
-    if(volume_ma_20 = 0, null, 
+    if(volume_ma_20 = 0 or isNull(volume_ma_20), null, 
        round(cast(_volume as Float64) / volume_ma_20, 2)
     ) as volume_ratio
 
-from with_rsi
+from calc_windows

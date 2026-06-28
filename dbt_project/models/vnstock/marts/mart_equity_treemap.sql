@@ -2,7 +2,7 @@
     config(
         materialized='table',
         engine='MergeTree()',
-        order_by=['_date'],
+        order_by=['_date', '_ticker'],
         schema='marts'
     ) 
 }}
@@ -13,9 +13,13 @@ with latest_prices as (
         sp._date,
         sp._close,
         sp._volume,
-        lag(sp._close, 1) over (partition by sp._ticker order by sp._date) as prev_close
+
+        lagInFrame(sp._close, 1, sp._close) over w_ticker as prev_close,
+        row_number() over w_ticker as row_num
     from {{ ref('stg_vnstock_stock_price') }} sp
     where sp._interval = '1D'
+    window 
+        w_ticker as (partition by sp._ticker order by sp._date)
 ),
 
 calc_performance as (
@@ -24,7 +28,8 @@ calc_performance as (
         lp._date,
         lp._close,
         lp._volume,
-        (_close - prev_close) / nullIf(prev_close, 0) * 100 as daily_return_pct,
+        -- Nhân 1.0 để tránh lỗi chia số nguyên (Integer Division)
+        ((lp._close * 1.0 - lp.prev_close) / nullIf(lp.prev_close, 0)) * 100.0 as daily_return_pct,
         ts._organ_name,
         ts._industry_name,
         ts._en_industry_name,
@@ -34,7 +39,7 @@ calc_performance as (
     from latest_prices lp
     left join {{ ref('stg_vnstock_ticker_symbols') }} ts
         on lp._ticker = ts._ticker
-    where prev_close is not null
+    where lp.row_num > 1 
 )
 
 select
@@ -53,4 +58,3 @@ select
     -- Turnover proxy for treemap sizing (close * volume)
     round(cast(_close as Float64) * cast(_volume as Float64), 0) as turnover_proxy
 from calc_performance
-where daily_return_pct is not null

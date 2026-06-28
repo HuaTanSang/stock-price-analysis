@@ -81,6 +81,23 @@ WHERE _ticker = '$ticker'
 ORDER BY _date
 ```
 
+```sql 
+SELECT
+    toStartOfInterval(toDateTime(_date), toIntervalSecond($__interval_s)) AS time,
+    argMin(_open, _date) AS open,
+    max(_high) AS high,
+    min(_low) AS low,
+    argMax(_close, _date) AS close,
+    sum(_volume) AS volume
+FROM marts.mart_equity_daily_indicators
+WHERE _ticker = '$ticker'
+  AND _interval = '$interval'
+  AND $__timeFilter(_date)
+GROUP BY time
+ORDER BY time
+```
+
+
 - Panel type: **Candlestick**
 - Color scheme: Up=Green, Down=Red
 
@@ -170,6 +187,16 @@ WHERE _ticker = '$ticker'
   AND _date >= $__fromTime
   AND _date <= $__toTime
 ORDER BY _date
+
+SELECT
+    toStartOfInterval(toDateTime(_date), toIntervalSecond($__interval_s)) AS time,
+    argMax(macd_approx, _date) AS "MACD"
+FROM marts.mart_equity_daily_indicators
+WHERE _ticker = '$ticker'
+  AND _interval = '$interval'
+  AND $__timeFilter(_date)
+GROUP BY time
+ORDER BY time
 ```
 
 - Use bar display with color by value (positive=green, negative=red)
@@ -183,6 +210,17 @@ ORDER BY _date
 SELECT _close AS "Price" FROM marts.mart_equity_daily_indicators
 WHERE _ticker = '$ticker' AND _interval = '$interval'
 ORDER BY _date DESC LIMIT 1
+
+SELECT 
+    _close AS "Price" 
+FROM marts.mart_equity_daily_indicators
+WHERE _ticker = '$ticker' 
+  AND _interval = '$interval'
+  AND $__timeFilter(_date)
+ORDER BY _date DESC 
+LIMIT 1
+
+
 ```
 
 ```sql
@@ -190,6 +228,15 @@ ORDER BY _date DESC LIMIT 1
 SELECT daily_return_pct AS "Daily Return %" FROM marts.mart_equity_daily_indicators
 WHERE _ticker = '$ticker' AND _interval = '$interval'
 ORDER BY _date DESC LIMIT 1
+
+SELECT 
+    daily_return_pct AS "Daily Return %" 
+FROM marts.mart_equity_daily_indicators
+WHERE _ticker = '$ticker' 
+  AND _interval = '$interval'
+  AND $__timeFilter(_date)
+ORDER BY _date DESC 
+LIMIT 1
 ```
 
 ```sql
@@ -198,6 +245,16 @@ SELECT high_52w AS "52W High", low_52w AS "52W Low"
 FROM marts.mart_equity_daily_indicators
 WHERE _ticker = '$ticker' AND _interval = '$interval'
 ORDER BY _date DESC LIMIT 1
+
+SELECT 
+    high_52w AS "52W High", 
+    low_52w AS "52W Low"
+FROM marts.mart_equity_daily_indicators
+WHERE _ticker = '$ticker' 
+  AND _interval = '$interval'
+  AND $__timeFilter(_date)
+ORDER BY _date DESC 
+LIMIT 1
 ```
 
 ---
