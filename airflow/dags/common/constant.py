@@ -5,7 +5,7 @@ find_dotenv()
 load_dotenv()
 
 
-AIRFLOW_UID = os.get("AIRFLOW_UID")
+AIRFLOW_UID = os.getenv("AIRFLOW_UID")
 
 _AIRFLOW_WWW_USER_USERNAME = os.getenv("_AIRFLOW_WWW_USER_USERNAME")
 _AIRFLOW_WWW_USER_PASSWORD = os.getenv("_AIRFLOW_WWW_USER_PASSWORD")

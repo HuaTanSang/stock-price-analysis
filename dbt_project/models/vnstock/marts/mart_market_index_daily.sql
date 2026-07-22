@@ -2,20 +2,20 @@
     config(
         materialized='table',
         engine='MergeTree()',
-        order_by=['_index_symbol', '_date'],
+        order_by=['index_symbol', 'date'],
         schema='marts'
     ) 
 }}
 
 with base as (
     select
-        _index_symbol,
-        _date,
-        _open,
-        _high,
-        _low,
-        _close,
-        _volume
+        index_symbol,
+        date,
+        open,
+        high,
+        low,
+        close,
+        volume
     from {{ ref('stg_vnstock_market_index') }}
 ),
 
@@ -24,47 +24,47 @@ calc_indicators as (
         *,
 
         -- Daily return
-        (_close - lag(_close, 1) over w_idx) 
-            / nullIf(lag(_close, 1) over w_idx, 0) * 100 
+        (close - lag(close, 1) over w_idx) 
+            / nullIf(lag(close, 1) over w_idx, 0) * 100 
             as daily_return_pct,
 
         -- Point change
-        (_close - lag(_close, 1) over w_idx) as daily_point_change,
+        (close - lag(close, 1) over w_idx) as daily_point_change,
 
         -- Moving averages
-        avg(_close) over w_5  as sma_5,
-        avg(_close) over w_20 as sma_20,
-        avg(_close) over w_50 as sma_50,
+        avg(close) over w_5  as sma_5,
+        avg(close) over w_20 as sma_20,
+        avg(close) over w_50 as sma_50,
 
         -- Volume analysis
-        avg(_volume) over w_20 as volume_ma_20,
+        avg(volume) over w_20 as volume_ma_20,
 
         -- 52-week high/low
-        max(_high) over w_252 as high_52w,
-        min(_low)  over w_252 as low_52w,
+        max(high) over w_252 as high_52w,
+        min(low)  over w_252 as low_52w,
 
         -- Cumulative return from first date
-        (_close - first_value(_close) over w_idx) 
-            / nullIf(first_value(_close) over w_idx, 0) * 100 
+        (close - first_value(close) over w_idx) 
+            / nullIf(first_value(close) over w_idx, 0) * 100 
             as cumulative_return_pct
 
     from base
     window 
-        w_idx as (partition by _index_symbol order by _date),
-        w_5   as (partition by _index_symbol order by _date rows between  4 preceding and current row),
-        w_20  as (partition by _index_symbol order by _date rows between 19 preceding and current row),
-        w_50  as (partition by _index_symbol order by _date rows between 49 preceding and current row),
-        w_252 as (partition by _index_symbol order by _date rows between 251 preceding and current row)
+        w_idx as (partition by index_symbol order by date),
+        w_5   as (partition by index_symbol order by date rows between  4 preceding and current row),
+        w_20  as (partition by index_symbol order by date rows between 19 preceding and current row),
+        w_50  as (partition by index_symbol order by date rows between 49 preceding and current row),
+        w_252 as (partition by index_symbol order by date rows between 251 preceding and current row)
 )
 
 select
-    _index_symbol,
-    _date,
-    _open,
-    _high,
-    _low,
-    _close,
-    _volume,
+    index_symbol,
+    date,
+    open,
+    high,
+    low,
+    close,
+    volume,
 
     round(daily_point_change, 2) as daily_point_change,
     round(daily_return_pct, 2) as daily_return_pct,
@@ -79,7 +79,7 @@ select
 
     round(volume_ma_20, 0) as volume_ma_20,
     if(volume_ma_20 = 0, null,
-       round(cast(_volume as Float64) / volume_ma_20, 2)
+       round(cast(volume as Float64) / volume_ma_20, 2)
     ) as volume_ratio
 
 from calc_indicators

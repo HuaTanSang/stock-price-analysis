@@ -13,8 +13,8 @@ dependencies = [
     "minio==7.2.20",
     "pandas==2.1.4",
     "python-dotenv==1.2.2",
-    "vnstock==4.0.3",
-    "vnstock_chart"
+    "vnstock==4.0.4",
+    "vnstock_chart",
 ]
 
 [dependency-groups]

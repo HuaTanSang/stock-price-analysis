@@ -1,6 +1,6 @@
 from airflow.decorators import task
 from datetime import datetime
-from constant import VIETNAM_HOLIDAYS
+from common.constant import VIETNAM_HOLIDAYS
 import logging
 
 logger = logging.getLogger(__name__)

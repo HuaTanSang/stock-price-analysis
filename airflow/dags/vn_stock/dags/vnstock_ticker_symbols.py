@@ -17,12 +17,12 @@ def vnstock_get_ticker_symbols_in_vietnam_dag():
     from common.end_dag import end_dag
 
     start_up = start_up_dag()
-    get_vn_ticker_symbol_and_save_to_minio = (
-        get_vn_ticker_symbol_and_save_to_minio.partial(bucket_name="vn-stock")
+    get_vn_ticker_symbol_and_save_to_minio_task = (
+        get_vn_ticker_symbol_and_save_to_minio(bucket_name="vn-stock")
     )
     end = end_dag()
 
-    start_up >> get_vn_ticker_symbol_and_save_to_minio >> end
+    start_up >> get_vn_ticker_symbol_and_save_to_minio_task >> end
 
 
 vnstock_get_ticker_symbols_in_vietnam_dag()

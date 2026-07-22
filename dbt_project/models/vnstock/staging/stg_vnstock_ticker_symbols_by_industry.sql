@@ -8,16 +8,20 @@
 
 with source_data as (
     select *
-    from {{ ref('raw_vnstock_ticker_symbols') }} 
+    from {{ ref('raw_vnstock_ticker_symbols_by_industry') }} 
 ), 
 
 casting_type as (
     select
         cast(symbol as String) as symbol,
         cast(organ_name as String) as organ_name,
+        cast(com_type_code as String) as com_type_code, 
+        cast(icb_level as String) as icb_level, 
+        cast(icb_code as String) as icb_code, 
+        cast(icb_name as String) as icb_name 
     from 
         source_data    
-), 
+),
 
 deduped as (
     select 
@@ -32,8 +36,12 @@ deduped as (
 cleaned as (
     select 
         symbol,
-        organ_name
-    from deduped 
+        organ_name,
+        com_code_type,
+        icb_level,
+        icb_code,
+        icb_name 
+    from deduped
     where rn = 1
 )
 

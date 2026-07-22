@@ -2,30 +2,52 @@
     config(
         materialized='table',
         engine='MergeTree()',
-        order_by=['_ticker', '_date'],
+        order_by=['ticker', 'date'],
         schema='marts'
     ) 
 }}
 
-with base as (
+with dim_ticker_symbol as (
     select
-        sp._ticker,
-        sp._date,
-        sp._open,
-        sp._high,
-        sp._low,
-        sp._close,
-        sp._volume,
-        sp._interval,
-        ts._organ_name,
-        ts._industry_name,
-        ts._en_industry_name,
-        ts._sector,
-        ts._en_sector,
-        ts._exchange
+        t1.symbol,
+        t1.organ_name,
+
+        t2.en_organ_name,
+        t2.exchange,
+        t2.type,
+        t2.id,
+
+        t3.com_code_type,
+        t3.icb_level,
+        t3.icb_code,
+        t3.icb_name
+
+    from raw_vnstock_ticker_symbol as t1
+    inner join raw_vnstock_ticker_symbol_by_exchange as t2
+    on t1.symbol = t2.symbol
+    inner join raw_vnstock_ticker_symbol_by_icb AS t3
+    on t1.symbol = t3.symbol;
+), 
+
+base as (
+    select
+        sp.ticker,
+        sp.date,
+        sp.open,
+        sp.high,
+        sp.low,
+        sp.close,
+        sp.volume,
+        sp.interval,
+        ts.organ_name,
+        ts.industry_name,
+        ts.en_industry_name,
+        ts.sector,
+        ts.en_sector,
+        ts.exchange
     from {{ ref('stg_vnstock_stock_price') }} sp
-    left join {{ ref('stg_vnstock_ticker_symbols') }} ts
-        on sp._ticker = ts._ticker
+    left join dim_ticker_symbol ts
+        on sp.ticker = ts.ticker
 ),
 
 -- Phase 1: Tính toán các chỉ báo cơ sở, True Range và gắn số dòng để xử lý warm-up
@@ -33,29 +55,29 @@ calc_base_metrics as (
     select 
         *,
         -- Số thứ tự dòng theo từng mã để kiểm soát thời gian khởi tạo (warm-up)
-        row_number() over (partition by _ticker order by _date) as row_num,  
+        row_number() over (partition by ticker order by date) as row_num,  
 
         -- Daily Returns
-       ((_close * 1.0 - lagInFrame(_close, 1, _close) over w_ticker) 
-            / nullIf(lagInFrame(_close, 1, _close) over w_ticker, 0)) * 100.0 
+       ((close * 1.0 - lagInFrame(close, 1, close) over w_ticker) 
+            / nullIf(lagInFrame(close, 1, close) over w_ticker, 0)) * 100.0 
             as daily_return_pct, 
 
         -- Typical Price (Nền tảng cho VWAP)
-        (_high + _low + _close) / 3 as typical_price,
+        (high + low + close) / 3 as typical_price,
 
         -- True Range chuẩn hóa với lagInFrame tránh lỗi biên dữ liệu
         greatest(
-            _high - _low,
-            abs(_high - lagInFrame(_close, 1, _high) over w_ticker),
-            abs(_low  - lagInFrame(_close, 1, _low) over w_ticker)
+            high - low,
+            abs(high - lagInFrame(close, 1, high) over w_ticker),
+            abs(low  - lagInFrame(close, 1, low) over w_ticker)
         ) as true_range,  
 
         -- RSI building blocks
-        if(_close > lagInFrame(_close, 1, _close) over w_ticker, _close - lagInFrame(_close, 1, _close) over w_ticker, 0) as _gain, -- checked 
-        if(_close < lagInFrame(_close, 1, _close) over w_ticker, lagInFrame(_close, 1, _close) over w_ticker - _close, 0) as _loss -- checked 
+        if(close > lagInFrame(close, 1, close) over w_ticker, close - lagInFrame(close, 1, close) over w_ticker, 0) as gain, -- checked 
+        if(close < lagInFrame(close, 1, close) over w_ticker, lagInFrame(close, 1, close) over w_ticker - close, 0) as loss -- checked 
     from base
     window 
-        w_ticker as (partition by _ticker order by _date)
+        w_ticker as (partition by ticker order by date)
 ),
 
 -- Phase 2: Áp dụng Window Functions kèm điều kiện loại bỏ nhiễu giai đoạn đầu (Warm-up Filter)
@@ -63,72 +85,72 @@ calc_windows as (
     select
         *,
         -- Simple Moving Averages (SMA) - Chỉ trả về giá trị khi đủ số phiên dữ liệu
-        if(row_num >= 5, avg(_close) over w_5, null) as sma_5,
-        if(row_num >= 20, avg(_close) over w_20, null) as sma_20,
-        if(row_num >= 50, avg(_close) over w_50, null) as sma_50,
+        if(row_num >= 5, avg(close) over w_5, null) as sma_5,
+        if(row_num >= 20, avg(close) over w_20, null) as sma_20,
+        if(row_num >= 50, avg(close) over w_50, null) as sma_50,
 
         -- Đường trung bình phục vụ tính MACD xấp xỉ
-        if(row_num >= 12, avg(_close) over w_12, null) as sma_12,
-        if(row_num >= 26, avg(_close) over w_26, null) as sma_26,
+        if(row_num >= 12, avg(close) over w_12, null) as sma_12,
+        if(row_num >= 26, avg(close) over w_26, null) as sma_26,
 
         -- Bollinger Bands Standard Deviation
-        if(row_num >= 20, stddevPop(_close) over w_20, null) as stddev_20,
+        if(row_num >= 20, stddevPop(close) over w_20, null) as stddev_20,
 
         -- Volume Moving Average
-        if(row_num >= 20, avg(_volume) over w_20, null) as volume_ma_20,
+        if(row_num >= 20, avg(volume) over w_20, null) as volume_ma_20,
 
         -- 52-week High/Low (252 ngày giao dịch)
-        if(row_num >= 252, max(_high) over w_252, null) as high_52w,
-        if(row_num >= 252, min(_low) over w_252, null) as low_52w,
+        if(row_num >= 252, max(high) over w_252, null) as high_52w,
+        if(row_num >= 252, min(low) over w_252, null) as low_52w,
 
         -- Cumulative return tính từ ngày đầu tiên lên sàn có trong hệ thống
-        (_close - first_value(_close) over w_ticker) 
-            / nullIf(first_value(_close) over w_ticker, 0) * 100 
+        (close - first_value(close) over w_ticker) 
+            / nullIf(first_value(close) over w_ticker, 0) * 100 
             as cumulative_return_pct,
 
         -- SỬA LỖI: Rolling VWAP 20 ngày chuẩn có trọng số khối lượng
         if(row_num >= 20, 
-            sum(typical_price * _volume) over w_20 / nullIf(sum(_volume) over w_20, 0), 
+            sum(typical_price * volume) over w_20 / nullIf(sum(volume) over w_20, 0), 
             null
         ) as vwap_20_rolling,
 
         -- RSI-14 averages (Phương pháp Cutler RSI)
-        if(row_num >= 14, avg(_gain) over w_14, null) as avg_gain_14,
-        if(row_num >= 14, avg(_loss) over w_14, null) as avg_loss_14,
+        if(row_num >= 14, avg(gain) over w_14, null) as avg_gain_14,
+        if(row_num >= 14, avg(loss) over w_14, null) as avg_loss_14,
 
         -- Average True Range (ATR-14)
         if(row_num >= 14, avg(true_range) over w_14, null) as atr_14
 
     from calc_base_metrics
     window 
-        w_ticker as (partition by _ticker order by _date),
-        w_5      as (partition by _ticker order by _date rows between  4 preceding and current row),
-        w_12     as (partition by _ticker order by _date rows between 11 preceding and current row),
-        w_14     as (partition by _ticker order by _date rows between 13 preceding and current row),
-        w_20     as (partition by _ticker order by _date rows between 19 preceding and current row),
-        w_26     as (partition by _ticker order by _date rows between 25 preceding and current row),
-        w_50     as (partition by _ticker order by _date rows between 49 preceding and current row),
-        w_252    as (partition by _ticker order by _date rows between 251 preceding and current row)
+        w_ticker as (partition by ticker order by date),
+        w_5      as (partition by ticker order by date rows between  4 preceding and current row),
+        w_12     as (partition by ticker order by date rows between 11 preceding and current row),
+        w_14     as (partition by ticker order by date rows between 13 preceding and current row),
+        w_20     as (partition by ticker order by date rows between 19 preceding and current row),
+        w_26     as (partition by ticker order by date rows between 25 preceding and current row),
+        w_50     as (partition by ticker order by date rows between 49 preceding and current row),
+        w_252    as (partition by ticker order by date rows between 251 preceding and current row)
 )
 
 -- Phase 3: Bo tròn kết quả và xử lý logic tầng cuối
 select
-    _ticker,
-    _date,
-    _interval,
-    _open, 
-    _high, 
-    _low, 
-    _close, 
-    _volume,
+    ticker,
+    date,
+    interval,
+    open, 
+    high, 
+    low, 
+    close, 
+    volume,
 
     -- Thông tin tham chiếu
-    _organ_name,
-    _industry_name,
-    _en_industry_name,
-    _sector,
-    _en_sector,
-    _exchange,
+    organ_name,
+    industry_name,
+    en_industry_name,
+    sector,
+    en_sector,
+    exchange,
 
     -- Hiệu suất tỷ suất sinh lời
     round(daily_return_pct, 2) as daily_return_pct,
